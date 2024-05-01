@@ -75,6 +75,10 @@ public class SignatureAnnotatedTypeFactory extends BaseAnnotatedTypeFactory {
       AnnotationBuilder.fromClass(elements, ClassGetSimpleName.class);
 
   /** The {@literal @}{@link ClassGetSimpleName} annotation. */
+  protected final AnnotationMirror CLASS_GET_NAME =
+      AnnotationBuilder.fromClass(elements, ClassGetName.class);
+
+  /** The {@literal @}{@link ClassGetSimpleName} annotation. */
   protected final AnnotationMirror FULLY_QUALIFIED_NAME =
       AnnotationBuilder.fromClass(elements, FullyQualifiedName.class);
 
@@ -262,7 +266,7 @@ public class SignatureAnnotatedTypeFactory extends BaseAnnotatedTypeFactory {
       // character after the last dot in the fully qualified name.
       if (TreeUtils.isMethodInvocation(tree, substringInt, processingEnv)) {
         String expressionAsString = tree.toString();
-        expressionAsString = expressionAsString.replaceAll("\\s", ""); // Remove all white spaces
+        expressionAsString = expressionAsString.replaceAll("\\s", "");
         String pattern = "(\\w+)\\.substring\\(\\1\\.lastIndexOf\\(\"\\.\"\\)\\+1\\)";
         Pattern regex = Pattern.compile(pattern);
         Matcher matcher = regex.matcher(expressionAsString);
@@ -272,6 +276,22 @@ public class SignatureAnnotatedTypeFactory extends BaseAnnotatedTypeFactory {
           if (receiverType.getPrimaryAnnotation(FullyQualifiedName.class) != null) {
             type.replaceAnnotation(CLASS_GET_SIMPLE_NAME);
           }
+        }
+      }
+
+      // This code segment verifies whether a string, formatted according to the JVM convention, can
+      // be regarded as a @ClassGetName after undergoing string manipulation.
+      // If the manipulation results in a string where the first element of the original string is
+      // ignored, and '/' is replaced with '.', it becomes a @ClassGetSimpleName.
+      if (TreeUtils.isMethodInvocation(tree, replaceCharChar, processingEnv)) {
+        String expressionAsString = tree.toString();
+        expressionAsString = expressionAsString.replaceAll("\\s", ""); // Remove all white spaces
+        String pattern =
+            "(\\w+)\\.substring\\(1,\\1\\.length\\(\\)\\-1\\)\\.replace\\('\\/','\\.'\\)";
+        Pattern regex = Pattern.compile(pattern);
+        Matcher matcher = regex.matcher(expressionAsString);
+        if (matcher.matches()) {
+          type.replaceAnnotation(CLASS_GET_NAME);
         }
       }
 
